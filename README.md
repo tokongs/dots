@@ -1,0 +1,2 @@
+# dots
+Minimalistic dotfiles management
