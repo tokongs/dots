@@ -21,6 +21,7 @@ func setupCommands() {
 	rootCMD.AddCommand(addCMD)
 	rootCMD.AddCommand(commitCMD)
 	rootCMD.AddCommand(applyCMD)
+	rootCMD.AddCommand(editCMD)
 
 	commitCMD.Flags().StringVarP(&Glob, "glob", "g", "*", "Glob to select files for commit")
 }

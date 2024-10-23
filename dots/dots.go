@@ -1,12 +1,14 @@
 package dots
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -111,6 +113,8 @@ func (d *Dots) Commit(glob, msg string) error {
 		return err
 	}
 
+	slog.Info("Pushed to remote")
+
 	return nil
 }
 
@@ -120,6 +124,21 @@ func (d *Dots) Init() error {
 	}
 
 	return nil
+}
+
+func (d *Dots) Edit(ctx context.Context, editor string, path string) error {
+	target := filepath.Join(d.Directory, path)
+	if _, err := os.Stat(target); err != nil {
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, editor, path)
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Dir = d.Directory
+
+	return cmd.Run()
 }
 
 func (d *Dots) Apply() error {
@@ -149,38 +168,42 @@ func (d *Dots) Apply() error {
 	return nil
 }
 
-func (d *Dots) Add(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	if !info.Mode().IsRegular() {
-		return errors.New("only regular files are supported")
-	}
-
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-
-	rel, err := filepath.Rel(d.RelativeTo, abs)
-	if err != nil {
-		return err
-	}
-
-	targetPath := filepath.Join(d.Directory, rel)
-	targetDir := filepath.Dir(targetPath)
-
-	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(targetDir, 0o755); err != nil {
+func (d *Dots) Add(paths []string) error {
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
 			return err
+		}
+
+		if !info.Mode().IsRegular() {
+			return errors.New("only regular files are supported")
 		}
 	}
 
-	slog.Info("Copying file", "source", abs, "target", targetPath)
-	if err := copyFile(abs, targetPath); err != nil {
-		return err
+	for _, path := range paths {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+
+		rel, err := filepath.Rel(d.RelativeTo, abs)
+		if err != nil {
+			return err
+		}
+
+		targetPath := filepath.Join(d.Directory, rel)
+		targetDir := filepath.Dir(targetPath)
+
+		if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(targetDir, 0o755); err != nil {
+				return err
+			}
+		}
+
+		slog.Info("Copying file", "source", abs, "target", targetPath)
+		if err := copyFile(abs, targetPath); err != nil {
+			return err
+		}
 	}
 
 	return nil

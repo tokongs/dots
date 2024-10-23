@@ -14,12 +14,12 @@ var client = dots.Dots{
 
 var addCMD = &cobra.Command{
 	Use:   "add [files]",
-	Short: "Add files or directories to be tracked",
+	Short: "Add files to track given a list of files",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return errors.New("must provide at least one path")
 		}
 
-		return client.Add(args[0])
+		return client.Add(args)
 	},
 }
