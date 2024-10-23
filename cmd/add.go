@@ -8,8 +8,8 @@ import (
 )
 
 var client = dots.Dots{
-	Directory: "/home/tokongs/.dots",
-	Base:      "/home/tokongs",
+	Directory:  "/home/tokongs/.dots",
+	RelativeTo: "/home/tokongs",
 }
 
 var addCMD = &cobra.Command{
