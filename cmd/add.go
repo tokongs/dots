@@ -4,13 +4,7 @@ import (
 	"errors"
 
 	"github.com/spf13/cobra"
-	"github.com/tokongs/dots/dots"
 )
-
-var client = dots.Dots{
-	Directory:  "/home/tokongs/.dots",
-	RelativeTo: "/home/tokongs",
-}
 
 var addCMD = &cobra.Command{
 	Use:   "add [files]",

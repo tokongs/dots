@@ -75,7 +75,7 @@ func (d *Dots) Status() error {
 	return nil
 }
 
-func (d *Dots) Commit(glob, msg string) error {
+func (d *Dots) Commit(ctx context.Context, glob, msg string) error {
 	r, w, err := d.repoAndWorktree()
 	if err != nil {
 		return err
@@ -108,7 +108,7 @@ func (d *Dots) Commit(glob, msg string) error {
 		slog.Info("Skipping commit as no files have changed")
 	}
 
-	err = r.Push(&git.PushOptions{Progress: os.Stdout})
+	err = r.PushContext(ctx, &git.PushOptions{Progress: os.Stdout})
 	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return err
 	}
@@ -118,8 +118,11 @@ func (d *Dots) Commit(glob, msg string) error {
 	return nil
 }
 
-func (d *Dots) Init() error {
-	if err := os.MkdirAll(d.Directory, 0o755); err != nil {
+func (d *Dots) Clone(ctx context.Context, repo string) error {
+	_, err := git.PlainCloneContext(ctx, d.Directory, false, &git.CloneOptions{
+		URL: repo,
+	})
+	if err != nil {
 		return err
 	}
 
@@ -141,7 +144,23 @@ func (d *Dots) Edit(ctx context.Context, editor string, path string) error {
 	return cmd.Run()
 }
 
-func (d *Dots) Apply() error {
+func (d *Dots) Apply(ctx context.Context, pull bool) error {
+	_, w, err := d.repoAndWorktree()
+	if err != nil {
+		return err
+	}
+
+	if pull {
+		err = w.PullContext(ctx, &git.PullOptions{})
+		if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return err
+		}
+
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			slog.Info("Git repo already up to date")
+		}
+	}
+
 	if err := filepath.WalkDir(d.Directory, func(path string, e fs.DirEntry, err error) error {
 		relative, err := filepath.Rel(d.Directory, path)
 		if err != nil {
@@ -160,6 +179,7 @@ func (d *Dots) Apply() error {
 		target := filepath.Join(d.RelativeTo, relative)
 
 		slog.Info("Copying dotfile", "src", path, "target", target)
+
 		return copyFile(path, target)
 	}); err != nil {
 		return err
@@ -213,6 +233,13 @@ func copyFile(src, dst string) error {
 	info, err := os.Stat(src)
 	if err != nil {
 		return err
+	}
+
+	dstDir := filepath.Dir(dst)
+	if _, err := os.Stat(dstDir); err != nil {
+		if err := os.MkdirAll(dstDir, 0o755); err != nil {
+			return err
+		}
 	}
 
 	if info.IsDir() {

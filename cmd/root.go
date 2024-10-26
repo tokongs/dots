@@ -1,21 +1,22 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/tokongs/dots/dots"
 )
 
-var rootCMD = &cobra.Command{
-	Use:   "dots",
-	Short: "Dots is a minimalistic dotfiles manager",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return nil
-	},
+var client = dots.Dots{
+	Directory:  filepath.Join(os.Getenv("HOME"), ".dots"),
+	RelativeTo: os.Getenv("HOME"),
 }
 
-func setupCommands() {
+func init() {
 	rootCMD.AddCommand(initCMD)
 	rootCMD.AddCommand(statusCMD)
 	rootCMD.AddCommand(addCMD)
@@ -23,13 +24,35 @@ func setupCommands() {
 	rootCMD.AddCommand(applyCMD)
 	rootCMD.AddCommand(editCMD)
 
-	commitCMD.Flags().StringVarP(&Glob, "glob", "g", "*", "Glob to select files for commit")
+	rootCMD.PersistentFlags().StringVarP(
+		&client.Directory,
+		"directory",
+		"d",
+		filepath.Join(os.Getenv("HOME"), ".dots"),
+		"Directory to keeep as staging area for Dots.",
+	)
+	rootCMD.MarkPersistentFlagDirname("directory")
+
+	rootCMD.PersistentFlags().StringVarP(
+		&client.RelativeTo,
+		"relative-to",
+		"r",
+		os.Getenv("HOME"),
+		"Where to store files relative to.",
+	)
+	rootCMD.MarkPersistentFlagDirname("relative-to")
+}
+
+var rootCMD = &cobra.Command{
+	Use:   "dots",
+	Short: "Dots is a minimalistic dotfiles manager",
 }
 
 func SetupAndExecute() {
-	setupCommands()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
 
-	if err := rootCMD.Execute(); err != nil {
+	if err := rootCMD.ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
