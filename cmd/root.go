@@ -28,7 +28,7 @@ func init() {
 		&client.Directory,
 		"directory",
 		"d",
-		filepath.Join(os.Getenv("HOME"), ".dots"),
+		client.Directory,
 		"Directory to keeep as staging area for Dots.",
 	)
 	rootCMD.MarkPersistentFlagDirname("directory")
@@ -37,7 +37,7 @@ func init() {
 		&client.RelativeTo,
 		"relative-to",
 		"r",
-		os.Getenv("HOME"),
+		client.RelativeTo,
 		"Where to store files relative to.",
 	)
 	rootCMD.MarkPersistentFlagDirname("relative-to")
@@ -48,7 +48,7 @@ var rootCMD = &cobra.Command{
 	Short: "Dots is a minimalistic dotfiles manager",
 }
 
-func SetupAndExecute() {
+func Execute() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
 

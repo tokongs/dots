@@ -20,6 +20,7 @@ var initCMD = &cobra.Command{
 		if err := client.Clone(cmd.Context(), args[0]); err != nil {
 			return err
 		}
+
 		if !ApplyAfterInit {
 			return nil
 		}

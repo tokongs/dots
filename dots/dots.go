@@ -265,7 +265,3 @@ func copyFile(src, dst string) error {
 
 	return nil
 }
-
-func (d *Dots) Refresh() error {
-	return errors.New("not implemented")
-}
